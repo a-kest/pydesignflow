@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2024 Tobias Kaiser <mail@tb-kaiser.de>
 # SPDX-License-Identifier: Apache-2.0
 
+from warnings import warn
+
 from .target import TargetPrototype
 
 def task(requires:dict[str,str]={}, always_rebuild=False, hidden=False):
@@ -25,3 +27,7 @@ def task(requires:dict[str,str]={}, always_rebuild=False, hidden=False):
         always_rebuild=always_rebuild,
         hidden=hidden,
     )
+
+def action(*args, **kwargs):
+    warn('Use @task instead of @action.', DeprecationWarning, stacklevel=2)
+    return task(*args, **kwargs)
