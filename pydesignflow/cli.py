@@ -5,6 +5,7 @@
 import argparse
 import argcomplete
 
+import os
 import sys
 from pathlib import Path
 from .result import Result
@@ -16,7 +17,7 @@ from .monitor import monitor
 class CLI:
     def __init__(self, flow):
         self.flow = flow
-    
+
     def create_parser(self, prog):
         def task_completer(**kwargs):
             b = kwargs["parsed_args"].block
@@ -52,6 +53,11 @@ class CLI:
         return parser
 
     def main(self, args: list[str], prog: str):
+        # https://stackoverflow.com/questions/12492810/python-how-can-i-make-the-ansi-escape-codes-to-work-also-in-windows
+        # Needed for ANSI escape codes (terminal colors) in Windows:
+        if os.name == 'nt':
+            os.system("")
+
         if len(self.flow.blocks) < 1:
             raise SystemExit("No blocks defined. Please define at least one block.")
 
