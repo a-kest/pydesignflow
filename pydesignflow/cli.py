@@ -3,7 +3,12 @@
 
 import sys
 import os
+
+# PYTHON_ARGCOMPLETE_OK
 import argparse
+import argcomplete
+
+import sys
 from pathlib import Path
 from .result import Result
 from .errors import FlowError, ResultRequired
@@ -14,8 +19,15 @@ from .monitor import monitor
 class CLI:
     def __init__(self, flow):
         self.flow = flow
-
+    
     def create_parser(self, prog):
+        def task_completer(**kwargs):
+            b = kwargs["parsed_args"].block
+            if b == None:
+                return []
+            t = list(self.flow.blocks[b].tasks.keys())
+            return t 
+
         parser = argparse.ArgumentParser(
             description='PyDesignFlow command line interface',
             prog=prog,
@@ -36,9 +48,10 @@ class CLI:
             help="Continuously monitor build directory for changes. A message is printed whenever a new target build is started or finished.")
         parser.add_argument("--hidden", "-a", action="store_true",
             help="Show hidden target.")
-        parser.add_argument("block", nargs='?')
-        parser.add_argument("task", nargs='?')
+        parser.add_argument("block", nargs='?', choices=list(self.flow.blocks.keys()))
+        parser.add_argument("task", nargs='?').completer = task_completer       
 
+        argcomplete.autocomplete(parser)
         return parser
 
     def main(self, args: list[str], prog: str):
