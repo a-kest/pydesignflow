@@ -9,7 +9,7 @@ from typing import Literal
 from .result import Result
 from .errors import FlowError, ResultRequired
 from .target import TargetId
-from .ansiterm import ANSITerm
+from .ansiterm import ANSITerm, NoColor
 
 tabulate.PRESERVE_WHITESPACE = True
 
@@ -170,10 +170,15 @@ class BuildSession:
             shutil.rmtree(self.build_dir, ignore_errors=True)
         self.reload_results()
 
-    def status_block(self, block_id:str, show_hidden:bool=True, show_targets:bool=False):
+    def status_block(self, block_id:str, show_hidden:bool=True, show_targets:bool=False, color:bool=True):
+        if color:
+            Color = ANSITerm
+        else:
+            Color = NoColor
+
         block = self.flow[block_id]
-        yield [ANSITerm.FgBlue+block_id+ANSITerm.Reset, "",
-            ANSITerm.FgBlue+compact_docstr(block.__doc__)+ANSITerm.Reset]
+        yield [Color.FgBlue+block_id+Color.Reset, "",
+            Color.FgBlue+compact_docstr(block.__doc__)+Color.Reset]
         for task_id, task in block.tasks.items():
             tid = TargetId(block_id, task_id)
             target = self.flow.target(tid)
@@ -182,29 +187,33 @@ class BuildSession:
                     continue
                 res=self.get_result(tid)
                 status=res.summary()
-                status = ANSITerm.FgGreen + status + ANSITerm.Reset
+                status = Color.FgGreen + status + Color.Reset
             elif tid in self.incomplete:
-                status =  ANSITerm.FgYellow + "incomplete" + ANSITerm.Reset
+                status =  Color.FgYellow + "incomplete" + Color.Reset
             else:
                 if (not show_targets) or (not show_hidden) and task.hidden:
                     continue
                 status = ""
-                #status = ANSITerm.FgRed + "not found" + ANSITerm.Reset
+                #status = Color.FgRed + "not found" + Color.Reset
             yield [f"  .{task_id}",  status, compact_docstr(target.__doc__)]
         
-    def status(self, block_id:str, show_hidden:bool) -> str:
+    def status(self, block_id:str, show_hidden:bool, fmrt:bool=True) -> str:
         """
         Args:
             block_id: Display only status for requested block. If block_id is
                 None, status of all blocks will be listed.
         """
         if block_id:
-            status_list = list(self.status_block(block_id, show_hidden=True, show_targets=True))
+            status_list = list(self.status_block(block_id, show_hidden=True, show_targets=True, color=fmrt))
         else:
             status_list = []
             for block_id in self.flow:
-                status_list += list(self.status_block(block_id, show_targets=show_hidden, show_hidden=False))
+                status_list += list(self.status_block(block_id, show_targets=show_hidden, show_hidden=False, color=fmrt))
         
         header = [["Target", "Status", "Help"]]
         table = header + status_list
-        return tabulate.tabulate(table, headers="firstrow", tablefmt="simple")
+
+        if fmrt:
+            return tabulate.tabulate(table, headers="firstrow", tablefmt="simple")
+        else:
+            return "\n".join([y for x in status_list for i, y in enumerate(x) if i == 0])
