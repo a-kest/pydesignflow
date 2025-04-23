@@ -6,7 +6,10 @@ import os
 
 # PYTHON_ARGCOMPLETE_OK
 import argparse
-import argcomplete
+try:
+    import argcomplete
+except ImportError:
+    argcomplete = None
 
 from pathlib import Path
 from .errors import ResultRequired
@@ -47,9 +50,13 @@ class CLI:
         parser.add_argument("--hidden", "-a", action="store_true",
             help="Show hidden target.")
         parser.add_argument("block", nargs='?', choices=list(self.flow.blocks.keys()))
-        parser.add_argument("task", nargs='?').completer = task_completer 
+        if argcomplete:
+            parser.add_argument("task", nargs='?').completer = task_completer 
+        else:
+            parser.add_argument("task", nargs='?')
 
-        argcomplete.autocomplete(parser)
+        if argcomplete:
+            argcomplete.autocomplete(parser)
         return parser
 
     def main(self, args: list[str], prog: str):
